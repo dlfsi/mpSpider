@@ -239,3 +239,7 @@ class JdParser(MpSpider):
         self.browser.close()
         self._dbcon.addItem(prdItem)
         return prdItem
+
+
+class KaolaParser(MpSpider):
+    pass
