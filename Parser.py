@@ -14,7 +14,8 @@ class MpSpider:
     firstPage = ''
     _startUrls = {
         'tmall': 'https://s.taobao.com/search?initiative_id=staobaoz_20170725&q=Bubs&s={idx}',
-        'jd': 'https://search.jd.com/Search?keyword=Bubs&enc=utf-8'
+        'jd':    'https://search.jd.com/Search?keyword=Bubs&enc=utf-8',
+        'kaola': 'https://www.kaola.com/search.html?zn=top&key=Bubs&searchRefer=searchbutton&timestamp=15011307773167'
     }
     blockLists = [
         '澳洲名品海外专营店','中国国际图书专营店','北京进出口图书专营','cafe24海外旗舰店',
@@ -33,6 +34,13 @@ class MpSpider:
             self.firstPage = self._startUrls[source]
         self.browser = webdriver.Chrome("chromedriver")
         self._dbcon = db()
+
+    def get_search_page(self):
+        self.browser.get(self.firstPage)
+        pageContent = self.browser.page_source
+        # save page source into a file
+        # Su.write_to_file('jdSearchPage.html', pageContent)
+        return pageContent
 
     def parser(self):
         item = BubsItem()
@@ -163,13 +171,6 @@ class JdParser(MpSpider):
     def __init__(self,*args, **kwargs):
         super(JdParser,self).__init__(source='jd',*args, **kwargs)
 
-    def get_search_page(self):
-        self.browser.get(self.firstPage)
-        pageContent = self.browser.page_source
-        # save page source into a file
-        Su.write_to_file('jdSearchPage.html', pageContent)
-        return pageContent
-
     def getTotalPages(self, content):
         bscontent = Selector(text=content)
         cpages = bscontent.xpath('//*[@id="J_topPage"]/span/b/text()').get()
@@ -242,4 +243,35 @@ class JdParser(MpSpider):
 
 
 class KaolaParser(MpSpider):
-    pass
+    def __init__(self,*args, **kwargs):
+        super(KaolaParser,self).__init__(source='kaola',*args, **kwargs)
+
+    def getTotalPages(self, content):
+        bsContent = BeautifulSoup(content, 'lxml')
+        pStr = bsContent.find('div', class_='simplePage').contents[1].text
+        cpages, tpages = pStr.split('/')
+        return cpages, tpages
+
+    def parseSeachPage(self, content, prdItem):
+        bsContent = BeautifulSoup(content, 'lxml')
+        for tag in bsContent.find_all('a', class_='comments'):     # sales
+            prdItem.prdSales.append(int(tag.text))
+            prdItem.date.append(self._data_dt)
+            prdItem.source.append('kaola')
+
+        for tag in bsContent.find_all('p', class_='selfflag'):     # shop name
+            prdItem.shopName.append(tag.text.strip('\n'))
+
+        for tag in bsContent.find_all(attrs={'class':'goodswrap'}):
+            if len(tag.contents)>=4:
+                prdItem.prdPrice.append(float(tag.contents[3].p.span.contents[1]))
+                prdItem.prdId.append(tag.contents[1].img['id'].split('-')[2])  # id
+
+                prdItem.prdName.append(tag.contents[3].a['title'])       # product name
+                itemUrl = tag.contents[1]['href']                      # url
+                prdItem.prdUrl.append(self._urlHead + 'www.kaola.com' + itemUrl)
+
+        return prdItem
+
+    def itemParser(self, item):
+        self._dbcon.addItem(item)
