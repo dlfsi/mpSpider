@@ -44,7 +44,7 @@ class DbOpr:
 
     def queryItem(self, datadt):
         cur = self.con.cursor()
-        cur.execute('SELECT * FROM ITEMLIST WHERE DATADT = %s and salesvolume!=0', datadt)
+        cur.execute('SELECT * FROM ITEM WHERE DATADT = %s and salesvolume!=0', datadt)
         rows = cur.fetchall()
         return rows
 

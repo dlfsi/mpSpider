@@ -55,7 +55,7 @@ class MpSpider:
             else:
                 self.pageIndex += self._nextPage
         # log search page information into the database
-        # self._dbcon.addItemList(item)
+        self._dbcon.addItemList(item)
         # parse more details via item page
         pitem = self.itemParser(item)
         # pitem = tmall._dbcon.queryItem()
@@ -161,7 +161,6 @@ class TmallParser(MpSpider):
             prdItem.prdSales.append(content.xpath('//*[@id="J_DetailMeta"]/div[1]/div[1]/div/ul/li[1]/div/span[2]/text()').get())
         elif source=='Taobao':
             prdItem.prdSales.append(content.xpath('//*[@id="J_SellCounter"]/text()').get())
-            # prdItem.shopName.append(content.xpath('//*[@id="J_ShopInfo"]/div/div[1]/div[1]/dl/dd/strong/a/text()').get())
         else:
             return
         return prdItem

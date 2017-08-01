@@ -23,16 +23,16 @@ def spider_handler(source):
 
 
 if __name__ == "__main__":
-    # ptmall = Process(target = spider_handler, args=('tmall',))
-    # pjd = Process(target = spider_handler, args=('jd',))
+    ptmall = Process(target = spider_handler, args=('tmall',))
+    pjd = Process(target = spider_handler, args=('jd',))
     pkaola = Process(target = spider_handler, args=('kaola',))
 
-    # ptmall.start()
-    # pjd.start()
+    ptmall.start()
+    pjd.start()
     pkaola.start()
 
-    # ptmall.join()
-    # pjd.join()
+    ptmall.join()
+    pjd.join()
     pkaola.join()
     print('---------- end ------------')
 
