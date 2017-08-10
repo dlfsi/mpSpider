@@ -13,9 +13,10 @@ class MpSpider:
     pageIndex = 0
     firstPage = ''
     _startUrls = {
-        'tmall': 'https://s.taobao.com/search?initiative_id=staobaoz_20170725&q=Bubs&s={idx}',
+        'tmall': 'https://s.taobao.com/search?initiative_id=staobaoz_{dt}&q=Bubs',
         'jd':    'https://search.jd.com/Search?keyword=Bubs&enc=utf-8',
         'kaola': 'https://www.kaola.com/search.html?zn=top&key=Bubs&searchRefer=searchbutton&timestamp=15011307773167'
+        # 'kaola': 'http://www.kaola.com/search.html?zn=top&key=A2&searchRefer=searchbutton&timestamp=1502100657247'
     }
     blockLists = [
         '澳洲名品海外专营店','中国国际图书专营店','北京进出口图书专营','cafe24海外旗舰店',
@@ -24,6 +25,7 @@ class MpSpider:
         'sleepwell_baby', '宝贝熊海外专营店'
     ]
     _nextPage = 44
+    pgIdx = '&bcoffset=4&p4ppushleft=1,48&ntoffset=4&s={idx}'
 
     def __init__(self, source=None):
         # super(MpSpider,self).__init__()
@@ -71,7 +73,12 @@ class TmallParser(MpSpider):
         mode = 'W'
         # access search page
         if mode == 'W':
-            url = self.firstPage.format(idx=self.pageIndex)
+            if self.pageIndex == 0:
+                url = self.firstPage.format(dt=self._data_dt)
+            elif self.pageIndex == 44:
+                url = self.firstPage.format(dt=self._data_dt) + '&bcoffset=4&p4ppushleft=1,48&s=44&ntoffset=4'
+            else:
+                url = self.firstPage.format(dt=self._data_dt) + self.pgIdx.format(idx=self.pageIndex)
             self.browser.get(url)
             pageContent = self.browser.page_source
             # save page source into a file
@@ -105,12 +112,16 @@ class TmallParser(MpSpider):
         for tagStatus in bsContent.find_all(attrs={'class': 'row row-2 title'}):
             prdItem.prdPrice.append(tagStatus.contents[1]['trace-price'])
             prdItem.prdId.append(tagStatus.contents[1]['data-nid'])
-            prdItem.prdName.append(tagStatus.contents[1].text)
+            prdItem.prdName.append(tagStatus.contents[1].text.strip('\t\n '))
             itemUrl = tagStatus.contents[1]['href']
-            prdItem.prdUrl.append(self._urlHead + itemUrl)
-            if str(itemUrl).__contains__('tmall'):
+            if itemUrl.__contains__('click.simba'):
+                prdItem.prdUrl.append(itemUrl)
+                print('-----%s------'%itemUrl)
+            else:
+                prdItem.prdUrl.append(self._urlHead + itemUrl)
+            if itemUrl.__contains__('tmall'):
                 prdItem.source.append('Tmall')
-            elif str(itemUrl).__contains__('taobao'):
+            elif itemUrl.__contains__('taobao'):
                 prdItem.source.append('Taobao')
             else:
                 prdItem.source.append('Unknown')
@@ -138,13 +149,13 @@ class TmallParser(MpSpider):
             self.browser.get(item.prdUrl[idx])
             content = self.browser.page_source  # received in string
             prdItem.prdId.append(prd)
-            prdItem.shopName.append(item.shopName[idx])
             prdItem.prdUrl.append(item.prdUrl[idx])
             prdItem.source.append(item.source[idx])
             prdItem.prdName.append(item.prdName[idx])
             prdItem.prdPrice.append(item.prdPrice[idx])
             prdItem.date.append(self._data_dt)
-
+            if item.source[idx] == 'Tmall':
+                prdItem.shopName.append(item.shopName[idx])
             if item.shopName[idx] == '':
                 prdItem.prdSales.append(item.prdSales[idx])
             else:
@@ -161,6 +172,7 @@ class TmallParser(MpSpider):
             prdItem.prdSales.append(content.xpath('//*[@id="J_DetailMeta"]/div[1]/div[1]/div/ul/li[1]/div/span[2]/text()').get())
         elif source=='Taobao':
             prdItem.prdSales.append(content.xpath('//*[@id="J_SellCounter"]/text()').get())
+            prdItem.shopName.append(content.xpath('//*[@id="detail"]/div[2]/div[1]/div/div[2]/div/div[1]/div/div[1]/div[2]/h3/a/text()').get())
         else:
             return
         return prdItem
