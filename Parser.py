@@ -15,8 +15,8 @@ class MpSpider:
     _startUrls = {
         'tmall': 'https://s.taobao.com/search?initiative_id=staobaoz_{dt}&q=Bubs',
         'jd':    'https://search.jd.com/Search?keyword=Bubs&enc=utf-8',
-        'kaola': 'https://www.kaola.com/search.html?zn=top&key=Bubs&searchRefer=searchbutton&timestamp=15011307773167'
-        # 'kaola': 'http://www.kaola.com/search.html?zn=top&key=A2&searchRefer=searchbutton&timestamp=1502100657247'
+        'kaola': 'https://www.kaola.com/search.html?zn=top&key=Bubs&searchRefer=searchbutton&timestamp=1502673850341'
+        # 'kaola': 'http://www.kaola.com/search.html?zn=top&key=A2&searchRefer=searchbutton&timestamp=1502673850341'
     }
     blockLists = [
         '澳洲名品海外专营店','中国国际图书专营店','北京进出口图书专营','cafe24海外旗舰店',
@@ -116,7 +116,6 @@ class TmallParser(MpSpider):
             itemUrl = tagStatus.contents[1]['href']
             if itemUrl.__contains__('click.simba'):
                 prdItem.prdUrl.append(itemUrl)
-                print('-----%s------'%itemUrl)
             else:
                 prdItem.prdUrl.append(self._urlHead + itemUrl)
             if itemUrl.__contains__('tmall'):
@@ -147,19 +146,26 @@ class TmallParser(MpSpider):
                 continue
 
             self.browser.get(item.prdUrl[idx])
+            if item.source[idx]== 'Taobao':
+                print('--->%s' % item.prdUrl[idx])
             content = self.browser.page_source  # received in string
+
+            if item.shopName[idx] == '':
+                item.source[idx] = 'Douyu'
+            prdItem = self.parsePrdPage(content, prdItem, item.source[idx])
+
+            if item.source[idx] == 'Tmall':
+                prdItem.shopName.append(item.shopName[idx])
+            elif item.source[idx] == 'Douyu':
+                prdItem.prdSales.append(item.prdSales[idx])
+                prdItem.shopName.append(item.shopName[idx])
             prdItem.prdId.append(prd)
             prdItem.prdUrl.append(item.prdUrl[idx])
             prdItem.source.append(item.source[idx])
             prdItem.prdName.append(item.prdName[idx])
             prdItem.prdPrice.append(item.prdPrice[idx])
             prdItem.date.append(self._data_dt)
-            if item.source[idx] == 'Tmall':
-                prdItem.shopName.append(item.shopName[idx])
-            if item.shopName[idx] == '':
-                prdItem.prdSales.append(item.prdSales[idx])
-            else:
-                self.parsePrdPage(content, prdItem, item.source[idx])
+
 
         self.browser.close()
         self._dbcon.addItem(prdItem)
@@ -173,8 +179,7 @@ class TmallParser(MpSpider):
         elif source=='Taobao':
             prdItem.prdSales.append(content.xpath('//*[@id="J_SellCounter"]/text()').get())
             prdItem.shopName.append(content.xpath('//*[@id="detail"]/div[2]/div[1]/div/div[2]/div/div[1]/div/div[1]/div[2]/h3/a/text()').get())
-        else:
-            return
+
         return prdItem
 
 

@@ -6,13 +6,14 @@ from datetime import date, datetime
 import pandas_datareader.data as web
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 
 def getfromdb():
     dbcon=db()
     con=dbcon.con
     cur=con.cursor()
-    cur.execute("select * from itemlist")
+    cur.execute("select * from item")
     rows=cur.fetchall()
     file='item_{dt}.xlsx'
     fname=file.format(dt=date.today().strftime('%Y%m%d'))
@@ -103,4 +104,26 @@ def test():
     plt.scatter(quotesdfMS.Close - quotesdfMS.Open, quotesdfMS.Volume)
     plt.show()
 
+def dbread():
+    dbcon = db().con
+
+    klquery = "select * from item where itemsource='kaola'"
+    kldf = pd.read_sql(klquery, dbcon)
+    kltbl = pd.pivot_table(kldf, index=["itemname"], columns=["datadt"], values=["salesvolume"],aggfunc=np.sum,fill_value=0)
+    kltbl.to_excel('.\Data\kaola.xlsx',sheet_name='kaola')
+
+    jdquery = "select * from item where itemsource='JD'"
+    jddf = pd.read_sql(jdquery, dbcon)
+    jdtbl = pd.pivot_table(jddf, index=["itemname"], columns=["datadt"], values=["salesvolume"],aggfunc=np.sum,fill_value=0)
+    jdtbl.to_excel('.\Data\jd.xlsx',sheet_name='jd')
+
+    tmquery = "select * from item where itemsource='Tmall'"
+    tmdf = pd.read_sql(tmquery, dbcon)
+    tmtbl = pd.pivot_table(tmdf, index=["itemname"], columns=["datadt"], values=["salesvolume"],aggfunc=np.sum,fill_value=0)
+    tmtbl.to_excel('.\Data\\tmall.xlsx',sheet_name='tmall')
+    tmtbl.plot()
+    plt.show()
+
+
+# dbread()
 getfromdb()

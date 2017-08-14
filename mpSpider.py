@@ -11,10 +11,10 @@ def spider_handler(source):
         tmall.parser()
     elif source == 'jd':
         jd = JdParser()
-        item = jd.parser()
+        jd.parser()
     elif source == 'kaola':
         kaola = KaolaParser()
-        item = kaola.parser()
+        kaola.parser()
     else:
         print('invalid source')
         return False
@@ -23,15 +23,8 @@ def spider_handler(source):
 
 
 if __name__ == "__main__":
-    ptmall = Process(target = spider_handler, args=('tmall',))
-    # pjd = Process(target = spider_handler, args=('jd',))
-    # pkaola = Process(target = spider_handler, args=('kaola',))
-
-    ptmall.start()
-    # pjd.start()
-    # pkaola.start()
-
-    ptmall.join()
-    # pjd.join()
-    # pkaola.join()
-    print('---------- end ------------')
+    spiders = ['tmall','jd','kaola']
+    # spiders = ['kaola']
+    for cnt, spider in enumerate(spiders):
+        sprocessing = Process(target=spider_handler, args=(spider,))
+        sprocessing.start()
