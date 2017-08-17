@@ -8,13 +8,13 @@ from multiprocessing import Process
 def spider_handler(source):
     if source == 'tmall':
         tmall = TmallParser()
-        tmall.parser()
+        tmall.parser(source)
     elif source == 'jd':
         jd = JdParser()
-        jd.parser()
+        jd.parser(source)
     elif source == 'kaola':
         kaola = KaolaParser()
-        kaola.parser()
+        kaola.parser(source)
     else:
         print('invalid source')
         return False
@@ -24,7 +24,6 @@ def spider_handler(source):
 
 if __name__ == "__main__":
     spiders = ['tmall','jd','kaola']
-    # spiders = ['kaola']
     for cnt, spider in enumerate(spiders):
         sprocessing = Process(target=spider_handler, args=(spider,))
         sprocessing.start()

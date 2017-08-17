@@ -1,5 +1,6 @@
 import re
 import time
+import math
 import SpiderUtils as Su
 from Items import BubsItem
 from bs4 import BeautifulSoup
@@ -13,10 +14,9 @@ class MpSpider:
     pageIndex = 0
     firstPage = ''
     _startUrls = {
-        'tmall': 'https://s.taobao.com/search?initiative_id=staobaoz_{dt}&q=Bubs',
-        'jd':    'https://search.jd.com/Search?keyword=Bubs&enc=utf-8',
-        'kaola': 'https://www.kaola.com/search.html?zn=top&key=Bubs&searchRefer=searchbutton&timestamp=1502673850341'
-        # 'kaola': 'http://www.kaola.com/search.html?zn=top&key=A2&searchRefer=searchbutton&timestamp=1502673850341'
+        'tmall': 'https://s.taobao.com/search?initiative_id=staobaoz_{dt}',
+        'jd':    'https://search.jd.com/Search?keyword={key}&enc=utf-8',
+        'kaola': 'https://www.kaola.com/search.html?zn=top&searchRefer=searchbutton&timestamp={tm}'
     }
     blockLists = [
         '澳洲名品海外专营店','中国国际图书专营店','北京进出口图书专营','cafe24海外旗舰店',
@@ -28,70 +28,62 @@ class MpSpider:
     pgIdx = '&bcoffset=4&p4ppushleft=1,48&ntoffset=4&s={idx}'
 
     def __init__(self, source=None):
-        # super(MpSpider,self).__init__()
         self._data_dt = time.strftime('%Y%m%d', time.localtime())
-        if source is None:
-            return
-        else:
-            self.firstPage = self._startUrls[source]
+        sec, day = math.modf(time.time())
+        self._tm = str(int(day)) + str(int(sec*1000))
+        self.firstPage = self._startUrls[source]
+        if source == 'kaola':
+            self.firstPage = self.firstPage.format(tm=self._tm) +'&key={key}'
+        elif source == 'tmall':
+            self.firstPage = self.firstPage.format(dt=self._data_dt) + '&q={key}'
+
         self.browser = webdriver.Chrome("chromedriver")
         self._dbcon = db()
 
-    def get_search_page(self):
-        self.browser.get(self.firstPage)
-        pageContent = self.browser.page_source
-        # save page source into a file
-        # Su.write_to_file('jdSearchPage.html', pageContent)
-        return pageContent
+    def get_search_page(self, url):
+        self.browser.get(url)
+        return self.browser.page_source
 
-    def parser(self):
-        item = BubsItem()
-        while True:
-            response = self.get_search_page()
-            if response is None:
-                break
-            cpages, tpages = self.getTotalPages(response)
-            item = self.parseSeachPage(response, item)
-            if cpages == tpages:
-                break
-            else:
-                self.pageIndex += self._nextPage
-        # log search page information into the database
-        self._dbcon.addItemList(item)
-        # parse more details via item page
-        pitem = self.itemParser(item)
-        # pitem = tmall._dbcon.queryItem()
-        # Su.save_to_excel(pitem, 'item_tmall.xlsx')
-        return pitem
+    def parser(self, source):
+        keywords = {'tmall': ['Bubs'],
+                    'jd': ['Bubs'],
+                    'kaola': ['Bubs', 'A2']
+        }
+        words = keywords[source]
+        for value in words:
+            item = BubsItem()
+            url = self.firstPage.format(key=value)
+            while True:
+                response = self.get_search_page(url)
+                if response is None:
+                    break
+                cpages, tpages = self.getTotalPages(response)
+                item = self.parseSeachPage(response, item)
+                if cpages == tpages:
+                    break
+                else:
+                    self.pageIndex += self._nextPage
+            # log search page information into the database
+            self._dbcon.addItemList(item)
+
+            # parse more details via item page
+            self.itemParser(item)
+
+        return
 
 
 class TmallParser(MpSpider):
     def __init__(self,*args, **kwargs):
         super(TmallParser,self).__init__(source='tmall',*args, **kwargs)
 
-    def get_search_page(self):
-        mode = 'W'
+    def get_search_page(self, url):
         # access search page
-        if mode == 'W':
-            if self.pageIndex == 0:
-                url = self.firstPage.format(dt=self._data_dt)
-            elif self.pageIndex == 44:
-                url = self.firstPage.format(dt=self._data_dt) + '&bcoffset=4&p4ppushleft=1,48&s=44&ntoffset=4'
-            else:
-                url = self.firstPage.format(dt=self._data_dt) + self.pgIdx.format(idx=self.pageIndex)
-            self.browser.get(url)
-            pageContent = self.browser.page_source
-            # save page source into a file
-            # Su.write_to_file('searchPage.html', pageContent)
-        elif mode == 'F':
-            pageContent = Su.read_from_file('searchPage.html')
-        elif mode == 'D':
-            pageContent = self._dbcon.queryItem(self._data_dt)
-        else:
-            print('Error: Invalid Acces Mode')
-            return
-
-        return pageContent
+        if self.pageIndex == 44:
+            url = url + '&bcoffset=4&p4ppushleft=1,48&s=44&ntoffset=4'
+        elif self.pageIndex != 0:
+            url = url + self.pgIdx.format(idx=self.pageIndex)
+        self.browser.get(url)
+        return self.browser.page_source
 
     def getTotalPages(self, content):
         bscontent = Selector(text=content)
@@ -165,7 +157,6 @@ class TmallParser(MpSpider):
             prdItem.prdName.append(item.prdName[idx])
             prdItem.prdPrice.append(item.prdPrice[idx])
             prdItem.date.append(self._data_dt)
-
 
         self.browser.close()
         self._dbcon.addItem(prdItem)
@@ -290,4 +281,5 @@ class KaolaParser(MpSpider):
         return prdItem
 
     def itemParser(self, item):
+        self.browser.close()
         self._dbcon.addItem(item)

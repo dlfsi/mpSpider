@@ -13,7 +13,7 @@ def getfromdb():
     dbcon=db()
     con=dbcon.con
     cur=con.cursor()
-    cur.execute("select * from item")
+    cur.execute("select * from item where datadt>'20170731'")
     rows=cur.fetchall()
     file='item_{dt}.xlsx'
     fname=file.format(dt=date.today().strftime('%Y%m%d'))
@@ -76,7 +76,7 @@ def practice():
     # print(mean_ratings['M'].mean())
 
 
-def test():
+def get_quotes():
     today = date.today()
     end = today.strftime('%Y-%m-%d')
     start = datetime(today.year-1,today.month,today.day)
