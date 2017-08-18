@@ -24,6 +24,7 @@ def spider_handler(source):
 
 if __name__ == "__main__":
     spiders = ['tmall','jd','kaola']
-    for cnt, spider in enumerate(spiders):
+    # spiders = ['kaola']
+    for spider in spiders:
         sprocessing = Process(target=spider_handler, args=(spider,))
         sprocessing.start()

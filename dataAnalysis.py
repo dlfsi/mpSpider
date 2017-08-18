@@ -2,7 +2,7 @@ import SpiderUtils as Su
 from Items import BubsItem
 from dbOpr import DbOpr as db
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import pandas_datareader.data as web
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -13,11 +13,31 @@ def getfromdb():
     dbcon=db()
     con=dbcon.con
     cur=con.cursor()
-    cur.execute("select * from item where datadt>'20170731'")
-    rows=cur.fetchall()
-    file='item_{dt}.xlsx'
-    fname=file.format(dt=date.today().strftime('%Y%m%d'))
-    Su.save_to_excel(rows,fname)
+    # cur.execute("select * from item where datadt>'20170731'")
+    # rows=cur.fetchall()
+    # file='item_{dt}.xlsx'
+    # fname=file.format(dt=date.today().strftime('%Y%m%d'))
+    # Su.save_to_excel(rows,fname)
+
+    td = date.today().strftime('%Y%m%d')
+    yd = (date.today() + timedelta(-1)).strftime('%Y%m%d')
+    sql = "select a.itemname pname, a.itemprice price, a.salesvolume ydsales, b.salesvolume tdsales, (b.salesvolume-a.salesvolume)*a.itemprice as amount, 'A2' src, '{dt}' datadt from item a, item b where a.datadt='{d1}' and b.datadt='{d2}' and a.itemname=b.itemname and a.itemsource='kaola' and a.itemname like '%a2%' and b.salesvolume>a.salesvolume"
+    statements = sql.format(dt=td, d1=yd, d2=td)
+    from sqlalchemy import create_engine
+    engine = create_engine('postgresql://joe:a@localhost:5432/tmall')
+    data = pd.read_sql_query(statements,con)
+    # file = r'.\Data\a2_sales_{dt}.xlsx'
+    # fname = file.format(dt=date.today().strftime('%Y%m%d'))
+    # data.to_excel(fname,sheet_name=td)
+    data.to_sql('sales_sum',engine,index=False,if_exists='append')
+
+    sql = "select a.itemname pname, a.itemprice price, a.salesvolume ydsales, b.salesvolume tdsales, (b.salesvolume-a.salesvolume)*a.itemprice as amount, 'Bubs' src, '{dt}' datadt from item a, item b where a.datadt='{d1}' and b.datadt='{d2}' and a.itemname=b.itemname and a.itemsource='kaola' and a.itemname like '%ubs%' and b.salesvolume>a.salesvolume"
+    statements = sql.format(dt=td, d1=yd, d2=td)
+    data = pd.read_sql_query(statements, con)
+    # file = r'.\Data\bubs_sales_{dt}.xlsx'
+    # fname = file.format(dt=date.today().strftime('%Y%m%d'))
+    # data.to_excel(fname, sheet_name=td)
+    data.to_sql('sales_sum',engine,index=False,if_exists='append')
 
 
 def get_stock_price():

@@ -281,5 +281,4 @@ class KaolaParser(MpSpider):
         return prdItem
 
     def itemParser(self, item):
-        self.browser.close()
         self._dbcon.addItem(item)
